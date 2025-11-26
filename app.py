@@ -6,10 +6,10 @@ import os # Import os for file path checking
 import gdown # Import gdown for downloading large files
 
 # --- Configuration for Large File Download ---
-# CRITICAL: Replacing the placeholder ID with the ID provided by the user.
-# IMPORTANT: Ensure the files are set to "Anyone with the link" (Public).
-GOOGLE_DRIVE_ID_RESNET = '1H-xl1WKLj0eeGmgKB4K36tEUzGSD3An7' 
-GOOGLE_DRIVE_ID_EFFICIENTNET = '1AcFZoLFOqhrzyhmFZ0njWXYaPogwdpcX' # Updated with your EfficientNet Drive ID
+# CRITICAL: Filenames changed to .h5 for stability.
+# YOU MUST UPDATE THESE DRIVE IDs after saving and uploading the .h5 files!
+GOOGLE_DRIVE_ID_RESNET_H5 = 'REPLACE_WITH_NEW_RESNET_H5_ID' 
+GOOGLE_DRIVE_ID_EFFICIENTNET_H5 = 'REPLACE_WITH_NEW_EFFICIENTNET_H5_ID' 
 # ---------------------------------------------
 
 
@@ -45,14 +45,15 @@ def load_model(model_name):
     custom_objects_to_pass = {} # Initialize custom objects dictionary
     
     if model_name == "ResNet50 (Fine-Tuned)":
-        model_path = "autism_resnet50_finetuned.keras" 
-        drive_id = GOOGLE_DRIVE_ID_RESNET
+        model_path = "autism_resnet50_finetuned.h5" # CHANGED TO .h5
+        drive_id = GOOGLE_DRIVE_ID_RESNET_H5
     elif model_name == "EfficientNetB0":
-        model_path = "autism_efficientnet.keras"
-        drive_id = GOOGLE_DRIVE_ID_EFFICIENTNET
+        model_path = "autism_efficientnet.h5" # CHANGED TO .h5
+        drive_id = GOOGLE_DRIVE_ID_EFFICIENTNET_H5
         # CRITICAL FIX: Pass the imported module as a custom object if it was successfully imported.
         if efficientnet is not None:
-             custom_objects_to_pass = {'EfficientNetB0': efficientnet.EfficientNetB0}
+             # The custom object is needed for the original EfficientNet layers
+             custom_objects_to_pass = {'EfficientNetB0': efficientnet.EfficientNetB0} 
     
     # 1. Check if the model file is already present
     if not os.path.exists(model_path):
@@ -60,7 +61,7 @@ def load_model(model_name):
         
         # 2. Attempt to download using gdown
         # Check if the Drive ID is set and is not the placeholder string
-        if drive_id and drive_id != 'YOUR_RESNET_DRIVE_ID_HERE' and drive_id != 'YOUR_EFFICIENTNET_DRIVE_ID_HERE':
+        if drive_id and 'REPLACE_WITH_NEW' not in drive_id:
             try:
                 with st.spinner(f"Downloading {model_name} ({model_path})... This may take a moment for 200MB+ files."):
                     # gdown.download automatically handles file permission if set to public
@@ -71,8 +72,8 @@ def load_model(model_name):
                 st.exception(e)
                 return None
         else:
-            st.error(f"🔴 File not found: `{model_path}`. No valid Google Drive ID provided in `app.py` for dynamic download.")
-            st.warning("If you are trying to use the EfficientNet model, please update its Google Drive ID in `app.py`.")
+            st.error(f"🔴 File not found: `{model_path}`. Please replace the placeholder Drive IDs in `app.py` after saving the .h5 file.")
+            st.warning("Please follow the steps below to re-save the model in Colab using the more stable **.h5 format**.")
             return None
 
     # 3. Load the model (now that we know the file exists)
@@ -83,7 +84,8 @@ def load_model(model_name):
     except Exception as e:
         # Specific error for model corruption or dependency issues
         st.error(f"Error loading model: {e}")
-        st.error("This often indicates a model file corruption, incorrect saving format, or a missing layer/dependency issue (like `efficientnet` not being installed correctly).")
+        st.error("This often indicates a model file corruption, incorrect saving format, or a missing layer/dependency issue.")
+        st.info("The HDF5 (.h5) format is generally more robust against these errors than the newer .keras format.")
         return None
 
 def import_and_predict(image_data, model, model_name):
