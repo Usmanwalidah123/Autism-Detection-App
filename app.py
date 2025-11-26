@@ -42,6 +42,7 @@ def load_model(model_name):
     """
     model_path = ""
     drive_id = ""
+    custom_objects_to_pass = {} # Initialize custom objects dictionary
     
     if model_name == "ResNet50 (Fine-Tuned)":
         model_path = "autism_resnet50_finetuned.keras" 
@@ -49,6 +50,9 @@ def load_model(model_name):
     elif model_name == "EfficientNetB0":
         model_path = "autism_efficientnet.keras"
         drive_id = GOOGLE_DRIVE_ID_EFFICIENTNET
+        # CRITICAL FIX: Pass the imported module as a custom object if it was successfully imported.
+        if efficientnet is not None:
+             custom_objects_to_pass = {'EfficientNetB0': efficientnet.EfficientNetB0}
     
     # 1. Check if the model file is already present
     if not os.path.exists(model_path):
@@ -73,7 +77,8 @@ def load_model(model_name):
 
     # 3. Load the model (now that we know the file exists)
     try:
-        model = tf.keras.models.load_model(model_path)
+        # Pass custom_objects if the model requires it (i.e., for EfficientNet from the external lib)
+        model = tf.keras.models.load_model(model_path, custom_objects=custom_objects_to_pass)
         return model
     except Exception as e:
         # Specific error for model corruption or dependency issues
