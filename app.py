@@ -105,12 +105,16 @@ def import_and_predict(image_data, model, model_name):
         # ResNet preprocessing is built into Keras Applications
         preprocessed_image = tf.keras.applications.resnet.preprocess_input(img_reshape.astype(float))
     elif "EfficientNetB0" in model_name:
-        # Try to use the imported efficientnet preprocessing first, otherwise use the TensorFlow version
+        # Check if the external efficientnet package was successfully imported.
         if efficientnet and hasattr(efficientnet, 'preprocess_input'):
             preprocessed_image = efficientnet.preprocess_input(img_reshape.astype(float))
         else:
-            # Fallback to the one built into TensorFlow/Keras
-            preprocessed_image = tf.keras.applications.efficientnet.preprocess_input(img_reshape.astype(float))
+            # If the external package failed, try the one that *might* exist in tf.keras.applications.
+            # However, since this is the source of the AttributeError, we'll try to explicitly avoid it 
+            # if the external import failed, and default to simple scaling if necessary.
+            st.error("Critical: External 'efficientnet' package failed to load. Falling back to simple scaling (0-1). This may affect accuracy.")
+            preprocessed_image = img_reshape.astype(float) / 255.0
+
     else:
         # Default to simple scaling if model name is unknown
         preprocessed_image = img_reshape.astype(float) / 255.0
