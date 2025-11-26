@@ -3,6 +3,15 @@ import tensorflow as tf
 from PIL import Image, ImageOps
 import numpy as np
 import os # Import os for file path checking
+import gdown # Import gdown for downloading large files
+
+# --- Configuration for Large File Download ---
+# CRITICAL: Replacing the placeholder ID with the ID provided by the user.
+# IMPORTANT: Ensure the files are set to "Anyone with the link" (Public).
+GOOGLE_DRIVE_ID_RESNET = '1H-xl1WKLj0eeGmgKB4K36tEUzGSD3An7' 
+GOOGLE_DRIVE_ID_EFFICIENTNET = '1AcFZoLFOqhrzyhmFZ0njWXYaPogwdpcX' # Updated with your EfficientNet Drive ID
+# ---------------------------------------------
+
 
 # IMPORTANT: Ensure the EfficientNet preprocessing module is correctly imported if 
 # you relied on the separate 'efficientnet' package during training.
@@ -32,20 +41,38 @@ def load_model(model_name):
     Cached to prevent reloading on every user interaction.
     """
     model_path = ""
-    if model_name == "ResNet50 (Fine-Tuned)":
-        # The filename you saved in Step 9 of your Colab
-        model_path = "autism_resnet50_finetuned.keras" 
-    elif model_name == "EfficientNetB0":
-        # The filename you saved in Step 4 of your Colab
-        model_path = "autism_efficientnet.keras"
+    drive_id = ""
     
-    # Check if the file exists before attempting to load
+    if model_name == "ResNet50 (Fine-Tuned)":
+        model_path = "autism_resnet50_finetuned.keras" 
+        drive_id = GOOGLE_DRIVE_ID_RESNET
+    elif model_name == "EfficientNetB0":
+        model_path = "autism_efficientnet.keras"
+        drive_id = GOOGLE_DRIVE_ID_EFFICIENTNET
+    
+    # 1. Check if the model file is already present
     if not os.path.exists(model_path):
-        st.error(f"🔴 File not found: `{model_path}`. Please ensure this file is uploaded to your GitHub repository in the same directory as `app.py`. Check if the file is too large (>100MB) and requires Git LFS.")
-        return None
+        st.info(f"Model file `{model_path}` not found locally. Attempting to download from Google Drive...")
+        
+        # 2. Attempt to download using gdown
+        # Check if the Drive ID is set and is not the placeholder string
+        if drive_id and drive_id != 'YOUR_RESNET_DRIVE_ID_HERE' and drive_id != 'YOUR_EFFICIENTNET_DRIVE_ID_HERE':
+            try:
+                with st.spinner(f"Downloading {model_name} ({model_path})... This may take a moment for 200MB+ files."):
+                    # gdown.download automatically handles file permission if set to public
+                    gdown.download(id=drive_id, output=model_path, quiet=False)
+                st.success(f"Successfully downloaded {model_path}!")
+            except Exception as e:
+                st.error(f"🔴 Download failed for {model_name}. Please check the Google Drive ID and file permissions.")
+                st.exception(e)
+                return None
+        else:
+            st.error(f"🔴 File not found: `{model_path}`. No valid Google Drive ID provided in `app.py` for dynamic download.")
+            st.warning("If you are trying to use the EfficientNet model, please update its Google Drive ID in `app.py`.")
+            return None
 
+    # 3. Load the model (now that we know the file exists)
     try:
-        # Load the model using the correct path
         model = tf.keras.models.load_model(model_path)
         return model
     except Exception as e:
@@ -157,4 +184,4 @@ else:
     elif model is None and file is not None:
          st.markdown("---")
          st.error("🚨 **Deployment Error Alert**")
-         st.markdown("Please re-read the error message above. The most common fix is **ensuring the `.keras` files are correctly uploaded to GitHub** (especially if they are large, which requires **Git LFS**).")
+         st.markdown("The model file could not be loaded. Please ensure the Google Drive IDs are correct and the files are publicly accessible.")
